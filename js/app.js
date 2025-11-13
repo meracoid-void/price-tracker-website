@@ -45,13 +45,93 @@
     thead.appendChild(trh);
     t.appendChild(thead);
     const tbody = document.createElement('tbody');
+    rows.forEach((r, rowIdx)=>{
+      const tr = document.createElement('tr');
+      headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
+      // Only add click handler if on Sheet1
+      if (sheetSelect.options[sheetSelect.selectedIndex].text === 'Sheet1') {
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', () => showAccountHistory(r[0])); // assumes first column is account name
+      }
+      tbody.appendChild(tr);
+    });
+    t.appendChild(tbody);
+    tableWrap.innerHTML = ''; tableWrap.appendChild(t);
+  }
+
+  // Modal for history
+  function ensureHistoryModal() {
+    let modal = document.getElementById('historyModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'historyModal';
+      modal.style.position = 'fixed';
+      modal.style.top = '0';
+      modal.style.left = '0';
+      modal.style.width = '100vw';
+      modal.style.height = '100vh';
+      modal.style.background = 'rgba(0,0,0,0.6)';
+      modal.style.display = 'flex';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '1000';
+      modal.innerHTML = '<div id="historyModalContent" style="background:#181f2a;padding:24px 18px 18px 18px;border-radius:12px;max-width:95vw;max-height:90vh;overflow:auto;position:relative;"></div>';
+      document.body.appendChild(modal);
+    }
+    return modal;
+  }
+
+  function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) modal.style.display = 'none';
+  }
+
+  async function showAccountHistory(accountName) {
+    setStatus('Loading history for ' + accountName + '...');
+    // Find the History sheet's gid
+    const historySheet = (cfg.SHEETS || []).find(s => s.name.toLowerCase() === 'history');
+    if (!historySheet) { setStatus('No History sheet configured'); return; }
+    const data = await fetchSheet(historySheet.gid);
+    if (!data) return;
+    // Find the column index for account name (case-insensitive match)
+    const colIdx = data.headers.findIndex(h => h.toLowerCase().includes('account'));
+    if (colIdx === -1) { setStatus('No account column in History'); return; }
+    // Filter rows by account name (exact match)
+    const filtered = data.rows.filter(r => (r[colIdx]||'').trim() === accountName.trim());
+    // Render modal
+    const modal = ensureHistoryModal();
+    const content = document.getElementById('historyModalContent');
+    content.innerHTML = `<button id="closeHistoryModal" style="position:absolute;top:8px;right:12px;font-size:20px;background:none;border:none;color:#fff;cursor:pointer;">&times;</button><h2 style="margin-top:0">History for ${accountName}</h2>`;
+    if (filtered.length) {
+      // Reuse renderTable logic for modal
+      const tempDiv = document.createElement('div');
+      renderTableIn(tempDiv, data.headers, filtered);
+      content.appendChild(tempDiv.firstChild);
+    } else {
+      content.innerHTML += '<div class="empty">No history found for this account.</div>';
+    }
+    modal.style.display = 'flex';
+    document.getElementById('closeHistoryModal').onclick = closeHistoryModal;
+  }
+
+  // Helper to render a table in a given element (for modal)
+  function renderTableIn(container, headers, rows) {
+    if(!rows.length){ container.innerHTML = '<div class="card empty">No rows found.</div>'; return; }
+    const t = document.createElement('table'); t.className = 'table card';
+    const thead = document.createElement('thead');
+    const trh = document.createElement('tr');
+    headers.forEach(h=>{ const th = document.createElement('th'); th.textContent = h; trh.appendChild(th); });
+    thead.appendChild(trh);
+    t.appendChild(thead);
+    const tbody = document.createElement('tbody');
     rows.forEach(r=>{
       const tr = document.createElement('tr');
       headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
       tbody.appendChild(tr);
     });
     t.appendChild(tbody);
-    tableWrap.innerHTML = ''; tableWrap.appendChild(t);
+    container.innerHTML = '';
+    container.appendChild(t);
   }
 
   async function fetchSheet(gid){

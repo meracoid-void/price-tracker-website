@@ -8,7 +8,8 @@ window.APP_CONFIG = {
   // Optional: provide mapping of sheet display names to gid values. If empty the app will try to fetch default sheets.
   SHEETS: [
     { name: "Sheet1", gid: "0" },
-    { name: "Cards", gid: "1848518848" }
+    { name: "Cards", gid: "1848518848" },
+    { name: "History", gid: "1778618288" },
   ],
   // If your sheet is private, you need to publish it to the web or use an API key + Sheets API. GitHub Pages cannot hide an API key.
   USE_PUBLISHED_CSV: true
