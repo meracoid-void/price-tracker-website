@@ -36,6 +36,22 @@
     return rows;
   }
 
+  function formatTimestamp(val) {
+    // Try to parse as ISO or common date/time, fallback to original
+    if (!val) return '';
+    let d = new Date(val);
+    if (!isNaN(d)) {
+      return d.toLocaleString();
+    }
+    // Try parsing as MM/DD/YYYY HH:MM:SS or similar
+    const parts = val.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})[ ,T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (parts) {
+      d = new Date(parts[3], parts[1]-1, parts[2], parts[4], parts[5], parts[6]||0);
+      if (!isNaN(d)) return d.toLocaleString();
+    }
+    return val;
+  }
+
   function renderTable(headers, rows){
     if(!rows.length){ tableWrap.innerHTML = '<div class="card empty">No rows found.</div>'; return; }
     const t = document.createElement('table'); t.className = 'table card';
@@ -44,16 +60,24 @@
     headers.forEach(h=>{ const th = document.createElement('th'); th.textContent = h; trh.appendChild(th); });
     thead.appendChild(trh);
     t.appendChild(thead);
+    // Find timestamp columns
+    const tsCols = headers.map(h => h.toLowerCase().includes('timestamp'));
     const tbody = document.createElement('tbody');
     rows.forEach((r, rowIdx)=>{
-      const tr = document.createElement('tr');
-      headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
-      // Only add click handler if on Sheet1
-      if (sheetSelect.options[sheetSelect.selectedIndex].text === 'Sheet1') {
-        tr.style.cursor = 'pointer';
-        tr.addEventListener('click', () => showAccountHistory(r[0])); // assumes first column is account name
-      }
-      tbody.appendChild(tr);
+        const tr = document.createElement('tr');
+        headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
+        const sheetName = sheetSelect.options[sheetSelect.selectedIndex].text;
+        if (sheetName === 'Sheet1') {
+          tr.style.cursor = 'pointer';
+          tr.addEventListener('click', () => showAccountHistory(r[0])); // assumes first column is account name
+        } else if (sheetName === 'Cards') {
+          tr.style.cursor = 'pointer';
+          tr.addEventListener('click', () => {
+            const cardName = encodeURIComponent((r[0]||'').trim());
+            if(cardName) window.open(`https://www.tcgplayer.com/search/yugioh/product?q=${cardName}&view=grid`, '_blank');
+          });
+        }
+        tbody.appendChild(tr);
     });
     t.appendChild(tbody);
     tableWrap.innerHTML = ''; tableWrap.appendChild(t);
@@ -75,8 +99,13 @@
       modal.style.alignItems = 'center';
       modal.style.justifyContent = 'center';
       modal.style.zIndex = '1000';
-      modal.innerHTML = '<div id="historyModalContent" style="background:#181f2a;padding:24px 18px 18px 18px;border-radius:12px;max-width:95vw;max-height:90vh;overflow:auto;position:relative;"></div>';
+      // Responsive modal content
+      modal.innerHTML = '<div id="historyModalContent" style="background:#181f2a;padding:24px 18px 18px 18px;border-radius:12px;max-width:95vw;max-height:90vh;overflow:auto;position:relative;width:100%;box-sizing:border-box;"></div>';
       document.body.appendChild(modal);
+      // Mobile style
+      const style = document.createElement('style');
+      style.textContent = `@media (max-width: 720px) { #historyModalContent { padding: 8px 2px 8px 2px !important; border-radius: 0 !important; max-width: 100vw !important; min-width: 0 !important; } #historyModal { align-items: flex-start !important; } }`;
+      document.head.appendChild(style);
     }
     return modal;
   }
@@ -120,13 +149,28 @@
     const t = document.createElement('table'); t.className = 'table card';
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
-    headers.forEach(h=>{ const th = document.createElement('th'); th.textContent = h; trh.appendChild(th); });
+    // Find note column index (case-insensitive)
+    const noteColIdx = headers.findIndex(h => h.toLowerCase().includes('note'));
+    headers.forEach((h, i)=>{
+      const th = document.createElement('th'); th.textContent = h;
+      if(i === noteColIdx) th.style.minWidth = '50ch';
+      trh.appendChild(th);
+    });
     thead.appendChild(trh);
     t.appendChild(thead);
+    // Find timestamp columns
+    const tsCols = headers.map(h => h.toLowerCase().includes('timestamp'));
     const tbody = document.createElement('tbody');
     rows.forEach(r=>{
       const tr = document.createElement('tr');
-      headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
+      headers.forEach((_,i)=>{
+        const td = document.createElement('td');
+        let val = r[i] || '';
+        if (tsCols[i]) val = formatTimestamp(val);
+        td.textContent = val;
+        if(i === noteColIdx) td.style.minWidth = '50ch';
+        tr.appendChild(td);
+      });
       tbody.appendChild(tr);
     });
     t.appendChild(tbody);
