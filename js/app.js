@@ -73,8 +73,15 @@
         } else if (sheetName === 'Cards') {
           tr.style.cursor = 'pointer';
           tr.addEventListener('click', () => {
-            const cardName = encodeURIComponent((r[0]||'').trim());
-            if(cardName) window.open(`https://www.tcgplayer.com/search/yugioh/product?q=${cardName}&view=grid`, '_blank');
+            let cardName = (r[0]||'').trim().toLowerCase().replace(/\s+/g, '+');
+            cardName = encodeURIComponent(cardName);
+            if(cardName) {
+              const url = `https://www.tcgplayer.com/search/all/product?q=${cardName}&view=grid`;
+              const win = window.open(url, '_blank', 'noopener,noreferrer');
+              if (!win) {
+                window.location.href = url;
+              }
+            }
           });
         }
         tbody.appendChild(tr);
