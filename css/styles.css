@@ -14,7 +14,18 @@ body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",
 .subtitle{color:var(--muted);margin-top:6px}
 .content{max-width:1100px;margin:28px auto;padding:18px}
 .controls{display:flex;gap:10px;align-items:center;margin-bottom:16px}
-.controls input, .controls select{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:var(--glass);color:var(--text)}
+.controls input, .controls select{
+  padding:8px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.04);
+  background:var(--card);
+  color:var(--text);
+  appearance:none;
+}
+.controls select option {
+  background: var(--card);
+  color: var(--text);
+}
 .controls button{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer}
 .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
 .status{color:var(--muted);margin-bottom:12px}
