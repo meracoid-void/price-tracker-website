@@ -188,9 +188,8 @@
   async function fetchSheet(gid){
     const id = cfg.SPREADSHEET_ID;
     if(!id || id.includes('PUT_YOUR')){ setStatus('Set SPREADSHEET_ID in js/config.js'); return; }
-    let url = buildUrl(id, gid);
-    // Use CORS proxy for Google Sheets CSV links
-    url = 'https://corsproxy.io/?' + encodeURIComponent(url);
+    // Use Netlify function endpoint
+    let url = `/.netlify/functions/get-sheet?sheetId=${encodeURIComponent(id)}&gid=${encodeURIComponent(gid)}`;
     setStatus('Fetching sheet...');
     try{
       const res = await fetch(url);
