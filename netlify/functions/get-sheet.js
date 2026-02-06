@@ -1,7 +1,6 @@
 // Netlify Function: get-sheet.js
 // Usage: /.netlify/functions/get-sheet?sheetId=...&gid=...
 
-const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
   const sheetId = event.queryStringParameters.sheetId;
