@@ -16,7 +16,7 @@ window.APP_CONFIG = {
   USE_PUBLISHED_CSV: true,
   
   // API configuration
-  API_BASE_URL: "http://localhost:3000", // For local development; use /.netlify/functions/api-handler for production
+  API_BASE_URL: "/.netlify/functions/api-handler", // http://localhost:3000 For local development; use /.netlify/functions/api-handler for production
   API_ENDPOINTS: {
     accounts: "/api/accounts",
     cards: "/api/cards",
