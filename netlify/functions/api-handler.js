@@ -16,7 +16,6 @@ pool.on('error', (err) => {
 
 async function query(text, params) {
   try {
-    console.log('DB', process.env.DATABASE_URL);
     const res = await pool.query(text, params);
     return res;
   } catch (err) {
