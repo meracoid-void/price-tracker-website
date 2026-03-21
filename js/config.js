@@ -16,7 +16,10 @@ window.APP_CONFIG = {
   USE_PUBLISHED_CSV: true,
   
   // API configuration
-  API_BASE_URL: "/.netlify/functions/api-handler", // http://localhost:3000 For local development; use /.netlify/functions/api-handler for production
+  // For production on Netlify: use "/.netlify/functions/api-handler" (relative path, same-origin)
+  // For full URL: use "https://meracoid-price-tracker.netlify.app/.netlify/functions/api-handler"
+  // For local dev: use "http://localhost:3000"
+  API_BASE_URL: "/.netlify/functions/api-handler",
   API_ENDPOINTS: {
     accounts: "/api/accounts",
     cards: "/api/cards",

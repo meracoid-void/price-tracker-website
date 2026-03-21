@@ -1,6 +1,8 @@
 // netlify/functions/api-handler.js - Universal API handler for Netlify Functions
 const { Pool } = require('pg');
 
+console.log('API Handler loaded. DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'NOT SET');
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
@@ -8,8 +10,18 @@ const pool = new Pool({
   }
 });
 
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
 async function query(text, params) {
-  return pool.query(text, params);
+  try {
+    const res = await pool.query(text, params);
+    return res;
+  } catch (err) {
+    console.error('Query error:', err.message, 'Query:', text);
+    throw err;
+  }
 }
 
 function corsHeaders() {
@@ -50,12 +62,16 @@ exports.handler = async (event) => {
     } else if (path.includes('/api/requests')) {
       return handleRequests(httpMethod, path, queryStringParameters, requestBody);
     }
-    return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
+    return { statusCode: 404, body: JSON.stringify({ error: 'Not found' }), headers: corsHeaders() };
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Handler error:', error.message, error.code);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ 
+        error: error.message,
+        code: error.code,
+        detail: process.env.NODE_ENV === 'development' ? error.detail : undefined
+      }),
       headers: corsHeaders()
     };
   }
