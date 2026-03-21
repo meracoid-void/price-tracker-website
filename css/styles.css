@@ -27,6 +27,7 @@ body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",
   color: var(--text);
 }
 .controls button{background:var(--accent);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer}
+.controls .mode-toggle{background:#6366f1;border:2px solid var(--accent);font-weight:600}
 .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
 .status{color:var(--muted);margin-bottom:12px}
 /* Table responsiveness */

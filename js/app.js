@@ -5,6 +5,15 @@
   const status = document.getElementById('status');
   const refreshBtn = document.getElementById('refresh');
   const searchInput = document.getElementById('search');
+  const modeToggle = document.getElementById('modeToggle');
+
+  // Track current data mode
+  let currentMode = localStorage.getItem('dataMode') || cfg.DATA_MODE || 'google-sheets';
+  
+  function updateModeButton() {
+    const modeName = currentMode === 'google-sheets' ? 'Google Sheets' : 'API';
+    modeToggle.textContent = `Mode: ${modeName}`;
+  }
 
   function setStatus(s){ status.textContent = s; }
 
@@ -34,6 +43,51 @@
       rows.push(row);
     });
     return rows;
+  }
+
+  // Convert API JSON data to table format (array of rows with headers)
+  function jsonToTable(data, sheetName) {
+    if (!Array.isArray(data) || data.length === 0) {
+      return { headers: [], rows: [] };
+    }
+    const headers = Object.keys(data[0]);
+    const rows = data.map(item => headers.map(h => item[h] || ''));
+    return { headers, rows };
+  }
+
+  // API fetching functions
+  async function fetchFromAPI(endpoint) {
+    const baseUrl = cfg.API_BASE_URL || '/.netlify/functions/api-handler';
+    const url = `${baseUrl}${endpoint}`;
+    setStatus('Fetching from API...');
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Network response not ok: ' + res.status);
+      const data = await res.json();
+      setStatus('Loaded ' + (Array.isArray(data) ? data.length : 1) + ' items.');
+      return data;
+    } catch (err) {
+      setStatus('Error fetching from API: ' + err.message);
+      console.error(err);
+      return null;
+    }
+  }
+
+  async function fetchSheetAPI(sheetName) {
+    let endpoint;
+    if (sheetName === 'Sheet1' || sheetName === 'Accounts') {
+      endpoint = cfg.API_ENDPOINTS?.accounts || '/api/accounts';
+    } else if (sheetName === 'Cards') {
+      endpoint = cfg.API_ENDPOINTS?.cards || '/api/cards';
+    } else if (sheetName === 'History') {
+      endpoint = cfg.API_ENDPOINTS?.history || '/api/history';
+    } else {
+      setStatus('Unknown sheet: ' + sheetName);
+      return null;
+    }
+    const data = await fetchFromAPI(endpoint);
+    if (!data) return null;
+    return jsonToTable(data, sheetName);
   }
 
   function formatTimestamp(val) {
@@ -185,25 +239,32 @@
     container.appendChild(t);
   }
 
-  async function fetchSheet(gid){
-    const id = cfg.SPREADSHEET_ID;
-    if(!id || id.includes('PUT_YOUR')){ setStatus('Set SPREADSHEET_ID in js/config.js'); return; }
-    // Use Netlify function endpoint
-    let url = `/.netlify/functions/get-sheet?sheetId=${encodeURIComponent(id)}&gid=${encodeURIComponent(gid)}`;
-    setStatus('Fetching sheet...');
-    try{
-      const res = await fetch(url);
-      if(!res.ok) throw new Error('Network response not ok: '+res.status);
-      const txt = await res.text();
-      const arr = csvToArray(txt);
-      const headers = arr[0] || [];
-      const rows = arr.slice(1);
-      setStatus('Loaded ' + rows.length + ' rows.');
-      return { headers, rows };
-    }catch(err){
-      setStatus('Error fetching sheet: ' + err.message);
-      console.error(err);
-      return null;
+  async function fetchSheet(gidOrSheetName){
+    if (currentMode === 'api') {
+      // API mode - gidOrSheetName is a sheet name like "Sheet1", "Cards", "History"
+      const sheetName = sheetSelect.options[sheetSelect.selectedIndex]?.text || gidOrSheetName;
+      return await fetchSheetAPI(sheetName);
+    } else {
+      // Google Sheets mode - gidOrSheetName is a gid
+      const id = cfg.SPREADSHEET_ID;
+      if(!id || id.includes('PUT_YOUR')){ setStatus('Set SPREADSHEET_ID in js/config.js'); return; }
+      // Use Netlify function endpoint
+      let url = `/.netlify/functions/get-sheet?sheetId=${encodeURIComponent(id)}&gid=${encodeURIComponent(gidOrSheetName)}`;
+      setStatus('Fetching sheet...');
+      try{
+        const res = await fetch(url);
+        if(!res.ok) throw new Error('Network response not ok: '+res.status);
+        const txt = await res.text();
+        const arr = csvToArray(txt);
+        const headers = arr[0] || [];
+        const rows = arr.slice(1);
+        setStatus('Loaded ' + rows.length + ' rows.');
+        return { headers, rows };
+      }catch(err){
+        setStatus('Error fetching sheet: ' + err.message);
+        console.error(err);
+        return null;
+      }
     }
   }
 
@@ -225,6 +286,14 @@
 
   // Populate dropdown once on startup
   populateSheetSelect();
+  updateModeButton();
+
+  modeToggle.addEventListener('click', () => {
+    currentMode = currentMode === 'google-sheets' ? 'api' : 'google-sheets';
+    localStorage.setItem('dataMode', currentMode);
+    updateModeButton();
+    load();
+  });
 
   sheetSelect.addEventListener('change', load);
   refreshBtn.addEventListener('click', load);
