@@ -158,10 +158,10 @@ async function handleCards(method, path, params, body) {
 async function handleHistory(method, path, params, body) {
   if (method === 'GET') {
     if (params && params.account_id) {
-      const result = await supabaseRequest('History', 'GET', `?account_id=eq.${params.account_id}&order=created_at.desc`);
+      const result = await supabaseRequest('History', 'GET', `?select=*&account_id=${params.account_id}&order=created_at.desc`);
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     } else {
-      const result = await supabaseRequest('History', 'GET', '?order=created_at.desc');
+      const result = await supabaseRequest('History', 'GET', `?select=*&order=created_at.desc`);
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     }
   } else if (method === 'POST') {
@@ -175,10 +175,10 @@ async function handleHistory(method, path, params, body) {
 async function handleCreditTransactions(method, path, params, body) {
   if (method === 'GET') {
     if (params && params.account_id) {
-      const result = await supabaseRequest('CreditTransactions', 'GET', `?account_id=eq.${params.account_id}&order=created_at.desc`);
+      const result = await supabaseRequest('CreditTransactions', 'GET', `?select=*&account_id=${params.account_id}&order=created_at.desc`);
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     } else {
-      const result = await supabaseRequest('CreditTransactions', 'GET', '?order=created_at.desc');
+      const result = await supabaseRequest('CreditTransactions', 'GET', `?select=*&order=created_at.desc`);
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     }
   } else if (method === 'POST') {

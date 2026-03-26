@@ -151,7 +151,7 @@ app.delete('/api/cards/:id', async (req, res) => {
 // History endpoints
 app.get('/api/history', async (req, res) => {
   try {
-    const result = await supabaseRequest('History', 'GET', '?order=created_at.desc');
+    const result = await supabaseRequest('History', 'GET', '?select=*&order=created_at.desc');
     res.json(result || []);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -160,7 +160,7 @@ app.get('/api/history', async (req, res) => {
 
 app.get('/api/history/account/:account_id', async (req, res) => {
   try {
-    const result = await supabaseRequest('History', 'GET', `?account_id=eq.${req.params.account_id}&order=created_at.desc`);
+    const result = await supabaseRequest('History', 'GET', `?select=*&account_id=${req.params.account_id}&order=created_at.desc`);
     res.json(result || []);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -180,7 +180,7 @@ app.post('/api/history', async (req, res) => {
 // CreditTransactions endpoints
 app.get('/api/credit-transactions', async (req, res) => {
   try {
-    const result = await supabaseRequest('CreditTransactions', 'GET', '?order=created_at.desc');
+    const result = await supabaseRequest('CreditTransactions', 'GET', '?select=*&order=created_at.desc');
     res.json(result || []);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -189,7 +189,7 @@ app.get('/api/credit-transactions', async (req, res) => {
 
 app.get('/api/credit-transactions/account/:account_id', async (req, res) => {
   try {
-    const result = await supabaseRequest('CreditTransactions', 'GET', `?account_id=eq.${req.params.account_id}&order=created_at.desc`);
+    const result = await supabaseRequest('CreditTransactions', 'GET', `?select=*&account_id=${req.params.account_id}&order=created_at.desc`);
     res.json(result || []);
   } catch (error) {
     res.status(500).json({ error: error.message });
