@@ -48,6 +48,13 @@ function corsHeaders() {
   };
 }
 
+function getCreatedAt(passedValue) {
+  if (passedValue) {
+    return passedValue;
+  }
+  return new Date().toISOString().split('T')[0];
+}
+
 exports.handler = async (event) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -107,8 +114,8 @@ async function handleAccounts(method, path, params, body) {
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     }
   } else if (method === 'POST') {
-    const { name, credit } = body;
-    const result = await supabaseRequest('Accounts', 'POST', '', { name, credit: credit || 0 });
+    const { name, credit, created_at } = body;
+    const result = await supabaseRequest('Accounts', 'POST', '', { name, credit: credit || 0, created_at: getCreatedAt(created_at) });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   } else if (method === 'PUT' && isId) {
     const { name, credit } = body;
@@ -136,8 +143,8 @@ async function handleCards(method, path, params, body) {
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     }
   } else if (method === 'POST') {
-    const { account_id, set_number, rarity } = body;
-    const result = await supabaseRequest('Cards', 'POST', '', { account_id, set_number, rarity });
+    const { account_id, set_number, rarity, created_at } = body;
+    const result = await supabaseRequest('Cards', 'POST', '', { account_id, set_number, rarity, created_at: getCreatedAt(created_at) });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   } else if (method === 'PUT' && isId) {
     const { account_id, set_number, rarity } = body;
@@ -165,8 +172,8 @@ async function handleHistory(method, path, params, body) {
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     }
   } else if (method === 'POST') {
-    const { account_id, type, card, set_number, rarity, amount, note } = body;
-    const result = await supabaseRequest('History', 'POST', '', { account_id, type, card, set_number, rarity, amount, note });
+    const { account_id, type, card, set_number, rarity, amount, note, created_at } = body;
+    const result = await supabaseRequest('History', 'POST', '', { account_id, type, card, set_number, rarity, amount, note, created_at: getCreatedAt(created_at) });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   }
   return { statusCode: 405, body: 'Method not allowed', headers: corsHeaders() };
@@ -182,8 +189,8 @@ async function handleCreditTransactions(method, path, params, body) {
       return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
     }
   } else if (method === 'POST') {
-    const { account_id, amount, note } = body;
-    const result = await supabaseRequest('CreditTransactions', 'POST', '', { account_id, amount, note, timestamp: new Date().toISOString() });
+    const { account_id, amount, note, created_at } = body;
+    const result = await supabaseRequest('CreditTransactions', 'POST', '', { account_id, amount, note, created_at: getCreatedAt(created_at) });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   }
   return { statusCode: 405, body: 'Method not allowed', headers: corsHeaders() };
@@ -197,8 +204,8 @@ async function handleRequests(method, path, params, body) {
     const result = await supabaseRequest('Requests', 'GET', '?order=created_at.desc');
     return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
   } else if (method === 'POST') {
-    const { requestor_id, associated_account_id, type, amount, card } = body;
-    const result = await supabaseRequest('Requests', 'POST', '', { requestor_id, associated_account_id, type, amount, card, is_approved: false });
+    const { requestor_id, associated_account_id, type, amount, card, created_at } = body;
+    const result = await supabaseRequest('Requests', 'POST', '', { requestor_id, associated_account_id, type, amount, card, is_approved: false, created_at: getCreatedAt(created_at) });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   } else if (method === 'PUT' && isId) {
     const { is_approved } = body;
