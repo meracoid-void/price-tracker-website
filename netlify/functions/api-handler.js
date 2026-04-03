@@ -135,12 +135,17 @@ async function handleCards(method, path, params, body) {
 
   if (method === 'GET') {
     if (isId) {
-      const result = await supabaseRequest('Cards', 'GET', `?id=eq.${id}`);
+      const result = await supabaseRequest('Cards', 'GET', `?id=${id}`);
       if (!result || result.length === 0) return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
       return { statusCode: 200, body: JSON.stringify(result[0]), headers: corsHeaders() };
     } else {
-      const result = await supabaseRequest('Cards', 'GET', '?order=id.asc');
-      return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
+      if (params && params.account_id) {
+        const result = await supabaseRequest('Cards', 'GET', `?select=*&account_id=${params.account_id}&order=id.asc`);
+        return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
+      } else {
+        const result = await supabaseRequest('Cards', 'GET', '?order=id.asc');
+        return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
+      }
     }
   } else if (method === 'POST') {
     const { account_id, set_number, rarity, created_at } = body;
