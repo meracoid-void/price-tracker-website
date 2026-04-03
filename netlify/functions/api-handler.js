@@ -103,29 +103,48 @@ exports.handler = async (event) => {
 async function handleAccounts(method, path, params, body) {
   const id = path.split('/').pop();
   const isId = !isNaN(id) && id !== 'api';
+  
+  console.log(`[Accounts] ${method} request - id: ${id}, isId: ${isId}, params:`, params, 'body:', body);
 
   if (method === 'GET') {
     if (isId) {
       const result = await supabaseRequest('Accounts', 'GET', `?id=eq.${id}`);
-      if (!result || result.length === 0) return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
-      return { statusCode: 200, body: JSON.stringify(result[0]), headers: corsHeaders() };
+      if (!result || result.length === 0) {
+        console.log(`[Accounts] GET ${id} - Not found`);
+        return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
+      }
+      const response = { statusCode: 200, body: JSON.stringify(result[0]), headers: corsHeaders() };
+      console.log(`[Accounts] GET ${id} - Success:`, result[0]);
+      return response;
     } else {
       const result = await supabaseRequest('Accounts', 'GET', '?order=id.asc');
-      return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
+      const response = { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
+      console.log(`[Accounts] GET all - Success, count:`, result ? result.length : 0);
+      return response;
     }
   } else if (method === 'POST') {
     const { name, credit, created_at } = body;
+    console.log(`[Accounts] POST - Creating with name: ${name}, credit: ${credit}, created_at: ${created_at}`);
     const result = await supabaseRequest('Accounts', 'POST', '', { name, credit: credit || 0, created_at: getCreatedAt(created_at) });
-    return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
+    const response = { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
+    console.log(`[Accounts] POST - Success:`, result[0] || result);
+    return response;
   } else if (method === 'PUT' && isId) {
     const { name, credit } = body;
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (credit !== undefined) updateData.credit = credit;
+    console.log(`[Accounts] PUT ${id} - Updating with:`, updateData);
     const result = await supabaseRequest('Accounts', 'PATCH', `?id=eq.${id}`, updateData);
-    if (!result || result.length === 0) return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
-    return { statusCode: 200, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
+    if (!result || result.length === 0) {
+      console.log(`[Accounts] PUT ${id} - Not found`);
+      return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
+    }
+    const response = { statusCode: 200, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
+    console.log(`[Accounts] PUT ${id} - Success:`, result[0] || result);
+    return response;
   }
+  console.log(`[Accounts] ${method} - Method not allowed`);
   return { statusCode: 405, body: 'Method not allowed', headers: corsHeaders() };
 }
 
