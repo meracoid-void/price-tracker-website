@@ -148,8 +148,8 @@ async function handleCards(method, path, params, body) {
       }
     }
   } else if (method === 'POST') {
-    const { account_id, set_number, rarity, created_at } = body;
-    const result = await supabaseRequest('Cards', 'POST', '', { account_id, set_number, rarity, created_at: getCreatedAt(created_at) });
+    const { account_id, set_number, rarity, created_at, name } = body;
+    const result = await supabaseRequest('Cards', 'POST', '', { account_id, set_number, rarity, created_at: getCreatedAt(created_at), name: name });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   } else if (method === 'PUT' && isId) {
     const { account_id, set_number, rarity } = body;
