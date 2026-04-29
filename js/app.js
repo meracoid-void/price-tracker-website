@@ -189,6 +189,12 @@
     tableWrap.innerHTML = ''; tableWrap.appendChild(t);
   }
 
+  function getAccountName(id) {
+    if (!id) return '-';
+    const account = accountsData.find(a => a.id == id);
+    return account ? (account.name || `Account #${id}`) : `Account #${id}`;
+  }
+
   function renderRequestsTable(headers, rows) {
     if(!rows.length){ 
       tableWrap.innerHTML = '<div class="card empty">No requests found.</div>'; 
@@ -203,12 +209,11 @@
     const cardIdx = headers.findIndex(h => h === 'card');
     const approvedIdx = headers.findIndex(h => h === 'is_approved');
     const createdIdx = headers.findIndex(h => h === 'created_at');
-    const idIdx = headers.findIndex(h => h === 'id');
     
     const t = document.createElement('table'); t.className = 'table card';
     const thead = document.createElement('thead');
     const trh = document.createElement('tr');
-    ['Type', 'From', 'To', 'Details', 'Status', 'Date', 'Action'].forEach(h => {
+    ['Type', 'From', 'To', 'Details', 'Status', 'Date'].forEach(h => {
       const th = document.createElement('th'); th.textContent = h; trh.appendChild(th);
     });
     thead.appendChild(trh);
@@ -219,21 +224,22 @@
       const tr = document.createElement('tr');
       const type = r[typeIdx] || '';
       const isApproved = r[approvedIdx] === 'true' || r[approvedIdx] === true;
-      const requestId = r[idIdx];
+      const requestorId = r[requestorIdx];
+      const targetId = r[targetIdx];
       
       // Type column
       const typeTd = document.createElement('td');
       typeTd.innerHTML = `<span class="badge badge-${type}">${type.replace('_', ' ')}</span>`;
       tr.appendChild(typeTd);
       
-      // From column
+      // From column - show name instead of ID
       const fromTd = document.createElement('td');
-      fromTd.textContent = r[requestorIdx] || '';
+      fromTd.textContent = getAccountName(requestorId);
       tr.appendChild(fromTd);
       
-      // To column
+      // To column - show name instead of ID
       const toTd = document.createElement('td');
-      toTd.textContent = r[targetIdx] || '-';
+      toTd.textContent = getAccountName(targetId);
       tr.appendChild(toTd);
       
       // Details column
@@ -254,31 +260,6 @@
       const dateTd = document.createElement('td');
       dateTd.textContent = formatTimestamp(r[createdIdx]);
       tr.appendChild(dateTd);
-      
-      // Action column
-      const actionTd = document.createElement('td');
-      if (!isApproved) {
-        const approveBtn = document.createElement('button');
-        approveBtn.textContent = 'Approve';
-        approveBtn.className = 'btn-approve';
-        approveBtn.onclick = async () => {
-          try {
-            approveBtn.disabled = true;
-            approveBtn.textContent = 'Processing...';
-            await approveRequest(requestId);
-            setStatus('Request approved successfully');
-            load();
-          } catch (err) {
-            setStatus('Error: ' + err.message);
-            approveBtn.disabled = false;
-            approveBtn.textContent = 'Approve';
-          }
-        };
-        actionTd.appendChild(approveBtn);
-      } else {
-        actionTd.textContent = '-';
-      }
-      tr.appendChild(actionTd);
       
       tbody.appendChild(tr);
     });
@@ -620,6 +601,14 @@
   }
 
   async function load(){
+    const sheetName = sheetSelect.options[sheetSelect.selectedIndex]?.text;
+    
+    // Load accounts data when viewing Requests (for name lookups)
+    if (sheetName === 'Requests' && accountsData.length === 0) {
+      const accountsEndpoint = cfg.API_ENDPOINTS?.accounts || '/api/accounts';
+      accountsData = await fetchFromAPI(accountsEndpoint) || [];
+    }
+    
     const data = await fetchSheet();
     if(!data) return;
     window._CURRENT_DATA = data;
