@@ -14,5 +14,6 @@ window.APP_CONFIG = {
     { name: "Accounts" },
     { name: "Cards" },
     { name: "History" },
+    { name: "Requests" },
   ]
 };

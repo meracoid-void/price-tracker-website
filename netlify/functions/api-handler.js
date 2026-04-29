@@ -229,10 +229,111 @@ async function handleRequests(method, path, params, body) {
     return { statusCode: 200, body: JSON.stringify(result || []), headers: corsHeaders() };
   } else if (method === 'POST') {
     const { requestor_id, associated_account_id, type, amount, card, created_at } = body;
+
+    // Validation for credit_transfer requests
+    if (type === 'credit_transfer') {
+      if (!requestor_id || !associated_account_id) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Both requestor_id and associated_account_id are required for credit transfers' }), headers: corsHeaders() };
+      }
+      if (!amount || amount <= 0) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Amount must be greater than 0' }), headers: corsHeaders() };
+      }
+
+      // Fetch sender account to validate credit
+      const senderResult = await supabaseRequest('Accounts', 'GET', `?id=eq.${requestor_id}`);
+      if (!senderResult || senderResult.length === 0) {
+        return { statusCode: 404, body: JSON.stringify({ error: 'Sender account not found' }), headers: corsHeaders() };
+      }
+      const sender = senderResult[0];
+
+      if (sender.credit < 0) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Cannot transfer from account with negative credit' }), headers: corsHeaders() };
+      }
+      if (sender.credit < amount) {
+        return { statusCode: 400, body: JSON.stringify({ error: `Insufficient credit. Available: ${sender.credit}, Requested: ${amount}` }), headers: corsHeaders() };
+      }
+
+      // Validate recipient exists
+      const recipientResult = await supabaseRequest('Accounts', 'GET', `?id=eq.${associated_account_id}`);
+      if (!recipientResult || recipientResult.length === 0) {
+        return { statusCode: 404, body: JSON.stringify({ error: 'Recipient account not found' }), headers: corsHeaders() };
+      }
+    }
+
+    // Validation for card_request
+    if (type === 'card_request') {
+      if (!card || card.trim() === '') {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Card name is required' }), headers: corsHeaders() };
+      }
+      if (!requestor_id) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'requestor_id is required' }), headers: corsHeaders() };
+      }
+    }
+
     const result = await supabaseRequest('Requests', 'POST', '', { requestor_id, associated_account_id, type, amount, card, is_approved: false, created_at: getCreatedAt(created_at) });
     return { statusCode: 201, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
   } else if (method === 'PUT' && isId) {
     const { is_approved } = body;
+
+    // If approving, handle auto-transfer for credit transfers
+    if (is_approved === true) {
+      // Get the request details
+      const requestResult = await supabaseRequest('Requests', 'GET', `?id=eq.${id}`);
+      if (!requestResult || requestResult.length === 0) {
+        return { statusCode: 404, body: JSON.stringify({ error: 'Request not found' }), headers: corsHeaders() };
+      }
+      const request = requestResult[0];
+
+      // If it's a credit transfer and not already approved, process the transfer
+      if (request.type === 'credit_transfer' && !request.is_approved) {
+        const { requestor_id, associated_account_id, amount } = request;
+
+        // Fetch sender account
+        const senderResult = await supabaseRequest('Accounts', 'GET', `?id=eq.${requestor_id}`);
+        if (!senderResult || senderResult.length === 0) {
+          return { statusCode: 404, body: JSON.stringify({ error: 'Sender account not found' }), headers: corsHeaders() };
+        }
+        const sender = senderResult[0];
+
+        // Validate sender still has sufficient credit
+        if (sender.credit < amount) {
+          return { statusCode: 400, body: JSON.stringify({ error: `Insufficient credit. Available: ${sender.credit}, Requested: ${amount}` }), headers: corsHeaders() };
+        }
+
+        // Deduct from sender
+        const newSenderCredit = sender.credit - amount;
+        await supabaseRequest('Accounts', 'PATCH', `?id=eq.${requestor_id}`, { credit: newSenderCredit });
+
+        // Add to recipient
+        const recipientResult = await supabaseRequest('Accounts', 'GET', `?id=eq.${associated_account_id}`);
+        if (!recipientResult || recipientResult.length === 0) {
+          return { statusCode: 404, body: JSON.stringify({ error: 'Recipient account not found' }), headers: corsHeaders() };
+        }
+        const recipient = recipientResult[0];
+        const newRecipientCredit = (recipient.credit || 0) + amount;
+        await supabaseRequest('Accounts', 'PATCH', `?id=eq.${associated_account_id}`, { credit: newRecipientCredit });
+
+        // Create history entries for both accounts
+        const today = new Date().toISOString().split('T')[0];
+        await supabaseRequest('History', 'POST', '', {
+          account_id: requestor_id,
+          type: 'credit_transfer_out',
+          card: `Transfer to account ${associated_account_id}`,
+          amount: -amount,
+          note: `Credit transfer to account #${associated_account_id}`,
+          created_at: today
+        });
+        await supabaseRequest('History', 'POST', '', {
+          account_id: associated_account_id,
+          type: 'credit_transfer_in',
+          card: `Transfer from account ${requestor_id}`,
+          amount: amount,
+          note: `Credit transfer from account #${requestor_id}`,
+          created_at: today
+        });
+      }
+    }
+
     const result = await supabaseRequest('Requests', 'PATCH', `?id=eq.${id}`, { is_approved });
     if (!result || result.length === 0) return { statusCode: 404, body: 'Not found', headers: corsHeaders() };
     return { statusCode: 200, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
