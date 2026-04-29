@@ -5,45 +5,8 @@
   const status = document.getElementById('status');
   const refreshBtn = document.getElementById('refresh');
   const searchInput = document.getElementById('search');
-  const modeToggle = document.getElementById('modeToggle');
-
-  // Track current data mode
-  let currentMode = localStorage.getItem('dataMode') || cfg.DATA_MODE || 'google-sheets';
-  
-  function updateModeButton() {
-    const modeName = currentMode === 'google-sheets' ? 'Google Sheets' : 'API';
-    modeToggle.textContent = `Mode: ${modeName}`;
-  }
 
   function setStatus(s){ status.textContent = s; }
-
-  function buildUrl(spreadsheetId, gid){
-    // If the ID starts with '2PACX-' or is from a published-to-web link, use the published CSV format
-    if (spreadsheetId.startsWith('2PACX-') || spreadsheetId.length > 40) {
-      // Published-to-web CSV link
-      return `https://docs.google.com/spreadsheets/d/e/${spreadsheetId}/pub?output=csv&gid=${gid}`;
-    }
-    // Standard Google Sheets CSV export
-    return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
-  }
-
-  function csvToArray(str){
-    // simple CSV parser (handles quoted fields)
-    const rows = [];
-    const re = /(?:\s*"((?:\\"|[^"])*?)"\s*|([^,]+)|)(?:,|$)/g;
-    const lines = str.split(/\r?\n/).filter(Boolean);
-    lines.forEach(line => {
-      const row = [];
-      line.replace(re, (_, quoted, unquoted)=>{
-        if(quoted!==undefined) row.push(quoted.replace(/\"/g,'"'));
-        else if(unquoted!==undefined) row.push(unquoted);
-        else row.push('');
-        return '';
-      });
-      rows.push(row);
-    });
-    return rows;
-  }
 
   // Convert API JSON data to table format (array of rows with headers)
   function jsonToTable(data, sheetName) {
@@ -75,7 +38,7 @@
 
   async function fetchSheetAPI(sheetName) {
     let endpoint;
-    if (sheetName === 'Sheet1' || sheetName === 'Accounts') {
+    if (sheetName === 'Accounts') {
       endpoint = cfg.API_ENDPOINTS?.accounts || '/api/accounts';
     } else if (sheetName === 'Cards') {
       endpoint = cfg.API_ENDPOINTS?.cards || '/api/cards';
@@ -98,7 +61,7 @@
       return d.toLocaleString();
     }
     // Try parsing as MM/DD/YYYY HH:MM:SS or similar
-    const parts = val.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})[ ,T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    const parts = val.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})[ ,T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if (parts) {
       d = new Date(parts[3], parts[1]-1, parts[2], parts[4], parts[5], parts[6]||0);
       if (!isNaN(d)) return d.toLocaleString();
@@ -121,7 +84,7 @@
         const tr = document.createElement('tr');
         headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
         const sheetName = sheetSelect.options[sheetSelect.selectedIndex].text;
-        if (sheetName === 'Sheet1') {
+        if (sheetName === 'Accounts') {
           tr.style.cursor = 'pointer';
           tr.addEventListener('click', () => showAccountHistory(r[0])); // assumes first column is account name
         } else if (sheetName === 'Cards') {
@@ -178,10 +141,7 @@
 
   async function showAccountHistory(accountName) {
     setStatus('Loading history for ' + accountName + '...');
-    // Find the History sheet's gid
-    const historySheet = (cfg.SHEETS || []).find(s => s.name.toLowerCase() === 'history');
-    if (!historySheet) { setStatus('No History sheet configured'); return; }
-    const data = await fetchSheet(historySheet.gid);
+    const data = await fetchSheetAPI('History');
     if (!data) return;
     // Find the column index for account name (case-insensitive match)
     const colIdx = data.headers.findIndex(h => h.toLowerCase().includes('account'));
@@ -239,46 +199,20 @@
     container.appendChild(t);
   }
 
-  async function fetchSheet(gidOrSheetName){
-    if (currentMode === 'api') {
-      // API mode - gidOrSheetName is a sheet name like "Sheet1", "Cards", "History"
-      const sheetName = sheetSelect.options[sheetSelect.selectedIndex]?.text || gidOrSheetName;
-      return await fetchSheetAPI(sheetName);
-    } else {
-      // Google Sheets mode - gidOrSheetName is a gid
-      const id = cfg.SPREADSHEET_ID;
-      if(!id || id.includes('PUT_YOUR')){ setStatus('Set SPREADSHEET_ID in js/config.js'); return; }
-      // Use Netlify function endpoint
-      let url = `/.netlify/functions/get-sheet?sheetId=${encodeURIComponent(id)}&gid=${encodeURIComponent(gidOrSheetName)}`;
-      setStatus('Fetching sheet...');
-      try{
-        const res = await fetch(url);
-        if(!res.ok) throw new Error('Network response not ok: '+res.status);
-        const txt = await res.text();
-        const arr = csvToArray(txt);
-        const headers = arr[0] || [];
-        const rows = arr.slice(1);
-        setStatus('Loaded ' + rows.length + ' rows.');
-        return { headers, rows };
-      }catch(err){
-        setStatus('Error fetching sheet: ' + err.message);
-        console.error(err);
-        return null;
-      }
-    }
+  async function fetchSheet(){
+    const sheetName = sheetSelect.options[sheetSelect.selectedIndex]?.text;
+    return await fetchSheetAPI(sheetName);
   }
 
   function populateSheetSelect(){
     sheetSelect.innerHTML = '';
     (cfg.SHEETS || []).forEach((s, idx)=>{
-      const opt = document.createElement('option'); opt.value = s.gid || idx; opt.textContent = s.name || ('Sheet ' + (idx+1)); sheetSelect.appendChild(opt);
+      const opt = document.createElement('option'); opt.value = idx; opt.textContent = s.name || ('Sheet ' + (idx+1)); sheetSelect.appendChild(opt);
     });
   }
 
   async function load(){
-    // Don't repopulate dropdown here
-    const gid = sheetSelect.value;
-    const data = await fetchSheet(gid);
+    const data = await fetchSheet();
     if(!data) return;
     window._CURRENT_DATA = data;
     renderTable(data.headers, data.rows);
@@ -286,14 +220,6 @@
 
   // Populate dropdown once on startup
   populateSheetSelect();
-  updateModeButton();
-
-  modeToggle.addEventListener('click', () => {
-    currentMode = currentMode === 'google-sheets' ? 'api' : 'google-sheets';
-    localStorage.setItem('dataMode', currentMode);
-    updateModeButton();
-    load();
-  });
 
   sheetSelect.addEventListener('change', load);
   refreshBtn.addEventListener('click', load);

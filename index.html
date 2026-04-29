@@ -3,21 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Price Tracker — Google Sheets Data</title>
+  <title>Price Tracker</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <header class="site-header">
     <h1>Price Tracker</h1>
-    <p class="subtitle">Displays data from a Google Sheet (works on GitHub Pages)</p>
+    <p class="subtitle">View accounts, cards, and transaction history</p>
   </header>
 
   <main class="content">
     <div class="controls">
-      <button id="modeToggle" class="mode-toggle">Mode: Google Sheets</button>
-      <label for="sheetSelect">Select sheet:</label>
       <select id="sheetSelect"></select>
-      <input id="search" placeholder="Filter rows (account or card)..." />
+      <input id="search" placeholder="Filter rows..." />
       <button id="refresh">Refresh</button>
     </div>
 
@@ -26,7 +24,7 @@
   </main>
 
   <footer class="site-footer">
-    <small>Built for GitHub Pages. Edit <code>js/config.js</code> with your spreadsheet ID and options.</small>
+    <small>Price Tracker — Data from API</small>
   </footer>
 
   <script src="js/config.js"></script>
