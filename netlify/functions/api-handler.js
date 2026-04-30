@@ -143,6 +143,11 @@ async function handleAccounts(method, path, params, body) {
     const response = { statusCode: 200, body: JSON.stringify(result[0] || result), headers: corsHeaders() };
     console.log(`[Accounts] PUT ${id} - Success:`, result[0] || result);
     return response;
+  } else if (method === 'DELETE' && isId) {
+    console.log(`[Accounts] DELETE ${id} - Deleting account`);
+    await supabaseRequest('Accounts', 'DELETE', `?id=eq.${id}`);
+    console.log(`[Accounts] DELETE ${id} - Success`);
+    return { statusCode: 200, body: JSON.stringify({ deleted: true }), headers: corsHeaders() };
   }
   console.log(`[Accounts] ${method} - Method not allowed`);
   return { statusCode: 405, body: 'Method not allowed', headers: corsHeaders() };
