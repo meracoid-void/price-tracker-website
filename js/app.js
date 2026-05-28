@@ -161,11 +161,20 @@
     headers.forEach(h=>{ const th = document.createElement('th'); th.textContent = h; trh.appendChild(th); });
     thead.appendChild(trh);
     t.appendChild(thead);
-    const tsCols = headers.map(h => h.toLowerCase().includes('timestamp'));
+    const tsCols = headers.map(h => {
+      const lower = h.toLowerCase();
+      return lower.includes('timestamp') || lower.includes('date') || lower.includes('created_at') || lower.includes('updated_at');
+    });
     const tbody = document.createElement('tbody');
     rows.forEach((r, rowIdx)=>{
         const tr = document.createElement('tr');
-        headers.forEach((_,i)=>{ const td = document.createElement('td'); td.textContent = r[i] || ''; tr.appendChild(td); });
+        headers.forEach((_,i)=>{ 
+          const td = document.createElement('td'); 
+          let val = r[i] || '';
+          if (tsCols[i]) val = formatTimestamp(val);
+          td.textContent = val;
+          tr.appendChild(td); 
+        });
         if (sheetName === 'Accounts') {
           tr.style.cursor = 'pointer';
           tr.addEventListener('click', () => showAccountHistory(r[0]));
@@ -519,7 +528,7 @@
     if (!data) return;
     const colIdx = data.headers.findIndex(h => h.toLowerCase().includes('account'));
     if (colIdx === -1) { setStatus('No account column in History'); return; }
-    const filtered = data.rows.filter(r => (r[colIdx]||'').trim() === accountName.trim());
+    const filtered = data.rows.filter(r => String(r[colIdx] || '').trim() === accountName.trim());
     const modal = ensureHistoryModal();
     const content = document.getElementById('historyModalContent');
     content.innerHTML = `<button id="closeHistoryModal" style="position:absolute;top:8px;right:12px;font-size:20px;background:none;border:none;color:#fff;cursor:pointer;">&times;</button><h2 style="margin-top:0">History for ${accountName}</h2>`;
@@ -547,7 +556,10 @@
     });
     thead.appendChild(trh);
     t.appendChild(thead);
-    const tsCols = headers.map(h => h.toLowerCase().includes('timestamp'));
+    const tsCols = headers.map(h => {
+      const lower = h.toLowerCase();
+      return lower.includes('timestamp') || lower.includes('date') || lower.includes('created_at') || lower.includes('updated_at');
+    });
     const tbody = document.createElement('tbody');
     rows.forEach(r=>{
       const tr = document.createElement('tr');
