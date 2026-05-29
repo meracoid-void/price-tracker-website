@@ -524,17 +524,16 @@
 
   async function showAccountHistory(accountName) {
     setStatus('Loading history for ' + accountName + '...');
-    const data = await fetchSheetAPI('History');
+    const historyEndpoint = cfg.API_ENDPOINTS?.history || '/api/history';
+    const data = await fetchFromAPI(`${historyEndpoint}?account_id=${accountName}`);
     if (!data) return;
-    const colIdx = data.headers.findIndex(h => h.toLowerCase().includes('account'));
-    if (colIdx === -1) { setStatus('No account column in History'); return; }
-    const filtered = data.rows.filter(r => String(r[colIdx] || '').trim() === String(accountName || '').trim());
+    const tableData = jsonToTable(data, 'History');
     const modal = ensureHistoryModal();
     const content = document.getElementById('historyModalContent');
     content.innerHTML = `<button id="closeHistoryModal" style="position:absolute;top:8px;right:12px;font-size:20px;background:none;border:none;color:#fff;cursor:pointer;">&times;</button><h2 style="margin-top:0">History for ${accountName}</h2>`;
-    if (filtered.length) {
+    if (tableData.rows.length) {
       const tempDiv = document.createElement('div');
-      renderTableIn(tempDiv, data.headers, filtered);
+      renderTableIn(tempDiv, tableData.headers, tableData.rows);
       content.appendChild(tempDiv.firstChild);
     } else {
       content.innerHTML += '<div class="empty">No history found for this account.</div>';
